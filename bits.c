@@ -1,177 +1,212 @@
-/* WARNING: Do not include any other libraries here,
- * otherwise you will get an error while running test.py
- * You can still use printf for debugging without including
- * <stdio.h>, although you might get a compiler warning. In general,
- * it's not good practice to ignore compiler warnings, but in this
- * case it's OK.
- *
- * Using printf will interfere with our script capturing the execution results.
- * At this point, you can only test correctness with ./btest.
- * After confirming everything is correct in ./btest, remove the printf
- * and run the complete tests with test.py.
- */
+#include "bits.h"
 
- /*
- * bitAnd - x & y using only ~ and |
- * Example: bitAnd(4, 5) = 4
- * Legal ops: ~ |
- * Max ops: 7
- * Difficulty: 1
- */
 int bitAnd(int x, int y) {
-    return 2;
+    return ~(~x | ~y);
 }
 
-/*
- * bitXor - x ^ y using only ~ and &
- *   Example: bitXor(4, 5) = 1
- *   Legal ops: ~ &
- *   Max ops: 7
- *   Difficulty: 1
- */
 int bitXor(int x, int y) {
-    return 2;
+    return ~(~(x | y) | ~(~x | ~y));
 }
 
-/*
- * samesign - Determines if two integers have the same sign.
- *   0 is not positive, nor negative
- *   Example: samesign(0, 1) = 0, samesign(0, 0) = 1
- *            samesign(-4, -5) = 1, samesign(-4, 5) = 0
- *   Legal ops: >> << ! ^ && if else &
- *   Max ops: 12
- *   Difficulty: 2
- *
- * Parameters:
- *   x - The first integer.
- *   y - The second integer.
- *
- * Returns:
- *   1 if x and y have the same sign , 0 otherwise.
- */
 int samesign(int x, int y) {
-    return 2;
+    if (x == 0 && y == 0)
+        return 1;
+
+    if (x == 0 || y == 0)
+        return 0;
+
+    return ((x < 0) == (y < 0));
 }
 
-/*
- * logtwo - Calculate the base-2 logarithm of a positive integer using bit
- *   shifting. (Think about bitCount)
- *   Note: You may assume that v > 0
- *   Example: logtwo(32) = 5
- *   Legal ops: > < >> << |
- *   Max ops: 25
- *   Difficulty: 4
- */
 int logtwo(int v) {
-    return 2;
+    int r = 0;
+    if (v >> 16) {
+        r += 16;
+        v >>= 16;
+    }
+    if (v >> 8) {
+        r += 8;
+        v >>= 8;
+    }
+    if (v >> 4) {
+        r += 4;
+        v >>= 4;
+    }
+    if (v >> 2) {
+        r += 2;
+        v >>= 2;
+    }
+    if (v >> 1)
+        r++;
+    return r;
 }
 
-/*
- *  byteSwap - swaps the nth byte and the mth byte
- *    Examples: byteSwap(0x12345678, 1, 3) = 0x56341278
- *              byteSwap(0xDEADBEEF, 0, 2) = 0xDEEFBEAD
- *    Note: You may assume that 0 <= n <= 3, 0 <= m <= 3
- *    Legal ops: ! ~ & ^ | + << >>
- *    Max ops: 17
- *    Difficulty: 2
- */
 int byteSwap(int x, int n, int m) {
-    return 2;
+    int ns = n << 3;
+    int ms = m << 3;
+    int bn = (x >> ns) & 255;
+    int bm = (x >> ms) & 255;
+    int mask = (255 << ns) | (255 << ms);
+
+    return (x & ~mask) | (bn << ms) | (bm << ns);
 }
 
-/*
- * reverse - Reverse the bit order of a 32-bit unsigned integer.
- *   Example: reverse(0xFFFF0000) = 0x0000FFFF reverse(0x80000000)=0x1 reverse(0xA0000000)=0x5
- *   Note: You may assume that an unsigned integer is 32 bits long.
- *   Legal ops: << | & - + >> for while ! ~ (You can define unsigned in this function)
- *   Max ops: 30
- *   Difficulty: 3
- */
 unsigned reverse(unsigned v) {
-    return 2;
+    v = ((v & 0x55555555u) << 1) |
+        ((v >> 1) & 0x55555555u);
+
+    v = ((v & 0x33333333u) << 2) |
+        ((v >> 2) & 0x33333333u);
+
+    v = ((v & 0x0f0f0f0fu) << 4) |
+        ((v >> 4) & 0x0f0f0f0fu);
+
+    return (v << 24) |
+           ((v & 0x0000ff00u) << 8) |
+           ((v >> 8) & 0x0000ff00u) |
+           (v >> 24);
 }
 
-/*
- * logicalShift - shift x to the right by n, using a logical shift
- *   Examples: logicalShift(0x87654321,4) = 0x08765432
- *   Note: You can assume that 0 <= n <= 31
- *   Legal ops: ! ~ & ^ | + << >>
- *   Max ops: 20
- *   Difficulty: 3
- */
 int logicalShift(int x, int n) {
-    return 2;
+    return (unsigned)x >> n;
 }
 
-/*
- * leftBitCount - returns count of number of consective 1's in left-hand (most) end of word.
- *   Examples: leftBitCount(-1) = 32, leftBitCount(0xFFF0F0F0) = 12,
- *             leftBitCount(0xFE00FF0F) = 7
- *   Legal ops: ! ~ & ^ | + << >>
- *   Max ops: 50
- *   Difficulty: 4
- */
 int leftBitCount(int x) {
-    return 2;
+    unsigned u = (unsigned)x;
+
+    if (u == 0xffffffffu)
+        return 32;
+
+    int n = 0;
+
+    if ((u >> 16) == 0xffff) {
+        n += 16;
+        u <<= 16;
+    }
+
+    if ((u >> 24) == 0xff) {
+        n += 8;
+        u <<= 8;
+    }
+
+    if ((u >> 28) == 0xf) {
+        n += 4;
+        u <<= 4;
+    }
+
+    if ((u >> 30) == 0x3) {
+        n += 2;
+        u <<= 2;
+    }
+
+    if (u >> 31)
+        n++;
+
+    return n;
 }
 
-/*
- * float_i2f - Return bit-level equivalent of expression (float) x
- *   Result is returned as unsigned int, but it is to be interpreted as
- *   the bit-level representation of a single-precision floating point values.
- *   Legal ops: if else while for & | ~ + - >> << < > ! ==
- *   Max ops: 30
- *   Difficulty: 4
- */
 unsigned float_i2f(int x) {
-    return 2;
+    if (x == 0)
+        return 0;
+
+    unsigned sign = 0;
+    unsigned u = (unsigned)x;
+
+    if (x < 0) {
+        sign = 0x80000000u;
+        u = (unsigned)(-x);
+    }
+
+    int e = 31;
+    while (!((u >> e) & 1))
+        e--;
+
+    unsigned exponent = (unsigned)(e + 127) << 23;
+    unsigned fraction;
+
+    if (e <= 23) {
+        fraction = (u << (23 - e)) & 0x7fffff;
+    } else {
+        int shift = e - 23;
+        unsigned significand = u >> shift;
+        unsigned remainder = u & ((1u << shift) - 1);
+        unsigned halfway = 1u << (shift - 1);
+
+        fraction = significand & 0x7fffff;
+
+        if (remainder > halfway ||
+            (remainder == halfway && (fraction & 1))) {
+            fraction++;
+
+            if (fraction >> 23) {
+                exponent += 0x800000;
+                fraction = 0;
+            }
+        }
+    }
+
+    return sign | exponent | fraction;
 }
 
-/*
- * floatScale2 - Return bit-level equivalent of expression 2*f for
- *   floating point argument f.
- *   Both the argument and result are passed as unsigned int's, but
- *   they are to be interpreted as the bit-level representation of
- *   single-precision floating point values.
- *   When argument is NaN, return argument
- *   Legal ops: & >> << | if > < >= <= ! ~ else + ==
- *   Max ops: 30
- *   Difficulty: 4
- */
 unsigned floatScale2(unsigned uf) {
-    return 2;
+    unsigned sign = uf & 0x80000000u;
+    unsigned exponent = uf & 0x7f800000u;
+    unsigned fraction = uf & 0x007fffffu;
+
+    if (exponent == 0x7f800000u)
+        return uf;
+
+    if (exponent == 0)
+        return sign | (fraction << 1);
+
+    exponent += 0x00800000u;
+
+    if (exponent == 0x7f800000u)
+        fraction = 0;
+
+    return sign | exponent | fraction;
 }
 
-/*
- * float64_f2i - Convert a 64-bit IEEE 754 floating-point number to a 32-bit signed integer.
- *   The conversion rounds towards zero.
- *   Note: Assumes IEEE 754 representation and standard two's complement integer format.
- *   Parameters:
- *     uf1 - The lower 32 bits of the 64-bit floating-point number.
- *     uf2 - The higher 32 bits of the 64-bit floating-point number.
- *   Returns:
- *     The converted integer value, or 0x80000000 on overflow, or 0 on underflow.
- *   Legal ops: >> << | & ~ ! + - > < >= <= if else
- *   Max ops: 60
- *   Difficulty: 3
- */
 int float64_f2i(unsigned uf1, unsigned uf2) {
-    return 2;
+    unsigned low = uf1;
+    unsigned high = uf2;
+
+    unsigned sign = high >> 31;
+    unsigned exponent = (high >> 20) & 0x7ff;
+    unsigned fraction = high & 0xfffff;
+
+    if (exponent < 1023)
+        return 0;
+
+    if (exponent >= 1054)
+        return (int)0x80000000u;
+
+    unsigned long long mantissa =
+        ((unsigned long long)(fraction | 0x100000) << 32) | low;
+
+    int shift = (int)exponent - 1075;
+    unsigned long long value;
+
+    if (shift >= 0)
+        value = mantissa << shift;
+    else
+        value = mantissa >> (-shift);
+
+    if (value > 0x7fffffffULL + (sign ? 1 : 0))
+        return (int)0x80000000u;
+
+    return sign ? -(int)value : (int)value;
 }
 
-/*
- * floatPower2 - Return bit-level equivalent of the expression 2.0^x
- *   (2.0 raised to the power x) for any 32-bit integer x.
- *
- *   The unsigned value that is returned should have the identical bit
- *   representation as the single-precision floating-point number 2.0^x.
- *   If the result is too small to be represented as a denorm, return
- *   0. If too large, return +INF.
- *
- *   Legal ops: < > <= >= << >> + - & | ~ ! if else &&
- *   Max ops: 30
- *   Difficulty: 4
- */
 unsigned floatPower2(int x) {
-    return 2;
+    if (x < -149)
+        return 0;
+
+    if (x < -126)
+        return 1u << (x + 149);
+
+    if (x > 127)
+        return 0x7f800000u;
+
+    return (unsigned)(x + 127) << 23;
 }
