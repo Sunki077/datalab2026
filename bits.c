@@ -5,48 +5,56 @@ int bitAnd(int x, int y) {
 }
 
 int bitXor(int x, int y) {
-    return ~(~(x | y) | ~(~x | ~y));
+    return ~(~x & ~y) & ~(x & y);
 }
 
 int samesign(int x, int y) {
-    if (x == 0 && y == 0)
-        return 1;
+    if (!x)
+        return !y;
 
-    if (x == 0 || y == 0)
+    if (!y)
         return 0;
 
-    return ((x < 0) == (y < 0));
+    return !((x ^ y) >> 31);
 }
 
 int logtwo(int v) {
-    int r = 0;
-    if (v >> 16) {
-        r += 16;
-        v >>= 16;
-    }
-    if (v >> 8) {
-        r += 8;
-        v >>= 8;
-    }
-    if (v >> 4) {
-        r += 4;
-        v >>= 4;
-    }
-    if (v >> 2) {
-        r += 2;
-        v >>= 2;
-    }
-    if (v >> 1)
-        r++;
-    return r;
+    int r;
+    int s;
+
+    r = 0;
+
+    s = ((v >> 16) > 0) << 4;
+    r |= s;
+    v >>= s;
+
+    s = ((v >> 8) > 0) << 3;
+    r |= s;
+    v >>= s;
+
+    s = ((v >> 4) > 0) << 2;
+    r |= s;
+    v >>= s;
+
+    s = ((v >> 2) > 0) << 1;
+    r |= s;
+    v >>= s;
+
+    return r | (v >> 1);
 }
 
 int byteSwap(int x, int n, int m) {
-    int ns = n << 3;
-    int ms = m << 3;
-    int bn = (x >> ns) & 255;
-    int bm = (x >> ms) & 255;
-    int mask = (255 << ns) | (255 << ms);
+    int ns;
+    int ms;
+    int bn;
+    int bm;
+    int mask;
+
+    ns = n << 3;
+    ms = m << 3;
+    bn = (x >> ns) & 255;
+    bm = (x >> ms) & 255;
+    mask = (255 << ns) | (255 << ms);
 
     return (x & ~mask) | (bn << ms) | (bm << ns);
 }
@@ -68,90 +76,90 @@ unsigned reverse(unsigned v) {
 }
 
 int logicalShift(int x, int n) {
-    return (unsigned)x >> n;
+    int mask;
+
+    mask = ~(((1 << 31) >> n) << 1);
+    return (x >> n) & mask;
 }
 
 int leftBitCount(int x) {
-    unsigned u = (unsigned)x;
+    int b16;
+    int b8;
+    int b4;
+    int b2;
+    int b1;
+    int last;
 
-    if (u == 0xffffffffu)
-        return 32;
+    b16 = !((~x) >> 16) << 4;
+    x <<= b16;
 
-    int n = 0;
+    b8 = !((~x) >> 24) << 3;
+    x <<= b8;
 
-    if ((u >> 16) == 0xffff) {
-        n += 16;
-        u <<= 16;
-    }
+    b4 = !((~x) >> 28) << 2;
+    x <<= b4;
 
-    if ((u >> 24) == 0xff) {
-        n += 8;
-        u <<= 8;
-    }
+    b2 = !((~x) >> 30) << 1;
+    x <<= b2;
 
-    if ((u >> 28) == 0xf) {
-        n += 4;
-        u <<= 4;
-    }
+    b1 = !((~x) >> 31);
+    x <<= b1;
 
-    if ((u >> 30) == 0x3) {
-        n += 2;
-        u <<= 2;
-    }
+    last = (x >> 31) & 1;
 
-    if (u >> 31)
-        n++;
-
-    return n;
+    return b16 + b8 + b4 + b2 + b1 + last;
 }
 
 unsigned float_i2f(int x) {
-    if (x == 0)
+    unsigned sign;
+    unsigned magnitude;
+    unsigned exponent;
+    unsigned fraction;
+    unsigned remainder;
+
+    if (!x)
         return 0;
 
-    unsigned sign = 0;
-    unsigned u = (unsigned)x;
+    sign = x & 0x80000000u;
+    magnitude = x;
 
-    if (x < 0) {
-        sign = 0x80000000u;
-        u = (unsigned)(-x);
+    if (sign)
+        magnitude = ~magnitude + 1;
+
+    exponent = 158;
+
+    while (!(magnitude & 0x80000000u)) {
+        magnitude <<= 1;
+        exponent--;
     }
 
-    int e = 31;
-    while (!((u >> e) & 1))
-        e--;
+    fraction = (magnitude >> 8) & 0x007fffffu;
+    remainder = magnitude & 0xffu;
 
-    unsigned exponent = (unsigned)(e + 127) << 23;
-    unsigned fraction;
+    if (remainder > 0x80u)
+        fraction = fraction + 1;
 
-    if (e <= 23) {
-        fraction = (u << (23 - e)) & 0x7fffff;
-    } else {
-        int shift = e - 23;
-        unsigned significand = u >> shift;
-        unsigned remainder = u & ((1u << shift) - 1);
-        unsigned halfway = 1u << (shift - 1);
-
-        fraction = significand & 0x7fffff;
-
-        if (remainder > halfway ||
-            (remainder == halfway && (fraction & 1))) {
-            fraction++;
-
-            if (fraction >> 23) {
-                exponent += 0x800000;
-                fraction = 0;
-            }
-        }
+    if (remainder == 0x80u) {
+        if (fraction & 1u)
+            fraction = fraction + 1;
     }
 
-    return sign | exponent | fraction;
+    if (fraction >> 23) {
+        fraction &= 0x007fffffu;
+        exponent += 1;
+    }
+
+    return sign | (exponent << 23) | fraction;
 }
 
 unsigned floatScale2(unsigned uf) {
-    unsigned sign = uf & 0x80000000u;
-    unsigned exponent = uf & 0x7f800000u;
-    unsigned fraction = uf & 0x007fffffu;
+    unsigned sign;
+    unsigned exponent;
+    unsigned fraction;
+
+    sign = uf & 0x80000000u;
+    exponent = uf & 0x7f800000u;
+    fraction = uf & 0x007fffffu;
 
     if (exponent == 0x7f800000u)
         return uf;
@@ -168,34 +176,39 @@ unsigned floatScale2(unsigned uf) {
 }
 
 int float64_f2i(unsigned uf1, unsigned uf2) {
-    unsigned low = uf1;
-    unsigned high = uf2;
+    unsigned low;
+    unsigned high;
+    unsigned sign;
+    unsigned exponent;
+    unsigned mantissa;
+    unsigned value;
+    int e;
 
-    unsigned sign = high >> 31;
-    unsigned exponent = (high >> 20) & 0x7ff;
-    unsigned fraction = high & 0xfffff;
+    low = uf1;
+    high = uf2;
+    sign = high >> 31;
+    exponent = (high >> 20) & 0x7ffu;
+    mantissa = (high & 0xfffffu) | 0x100000u;
 
-    if (exponent < 1023)
+    if (exponent < 1023u)
         return 0;
 
-    if (exponent >= 1054)
-        return (int)0x80000000u;
+    if (exponent > 1053u)
+        return 0x80000000u;
 
-    unsigned long long mantissa =
-        ((unsigned long long)(fraction | 0x100000) << 32) | low;
+    e = exponent - 1023u;
 
-    int shift = (int)exponent - 1075;
-    unsigned long long value;
+    if (e <= 20) {
+        value = mantissa >> (20 - e);
+    } else {
+        value = (mantissa << (e - 20)) |
+                (low >> (52 - e));
+    }
 
-    if (shift >= 0)
-        value = mantissa << shift;
-    else
-        value = mantissa >> (-shift);
+    if (sign)
+        return ~value + 1;
 
-    if (value > 0x7fffffffULL + (sign ? 1 : 0))
-        return (int)0x80000000u;
-
-    return sign ? -(int)value : (int)value;
+    return value;
 }
 
 unsigned floatPower2(int x) {
@@ -208,5 +221,5 @@ unsigned floatPower2(int x) {
     if (x > 127)
         return 0x7f800000u;
 
-    return (unsigned)(x + 127) << 23;
+    return (x + 127) << 23;
 }
